@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -27,12 +27,14 @@ from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 
 import glfw
-
-glfw.ERROR_REPORTING = "raise"
-
 import gl_utils
+from gl_utils import GLFWErrorReporting
+
+GLFWErrorReporting.set_default()
 
 from plugin import Plugin
+
+from hotkey import Hotkey
 
 # logging
 import logging
@@ -153,7 +155,11 @@ class Camera_Intrinsics_Estimation(Plugin):
         )
 
         self.button = ui.Thumb(
-            "collect_new", self, setter=self.advance, label="I", hotkey="i"
+            "collect_new",
+            self,
+            setter=self.advance,
+            label="I",
+            hotkey=Hotkey.CAMERA_INTRINSIC_ESTIMATOR_COLLECT_NEW_CAPTURE_HOTKEY(),
         )
         self.button.on_color[:] = (0.3, 0.2, 1.0, 0.9)
         self.g_pool.quickbar.insert(0, self.button)

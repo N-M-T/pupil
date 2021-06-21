@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -100,12 +100,13 @@ def world(
         else:
             stop_eye_process(eye_id)
 
-    def detection_enabled_getter() -> bool:
-        return g_pool.pupil_detection_enabled
+    def detection_enabled_getter() -> int:
+        return int(g_pool.pupil_detection_enabled)
 
-    def detection_enabled_setter(is_on: bool):
+    def detection_enabled_setter(value: int):
+        is_on = bool(value)
         g_pool.pupil_detection_enabled = is_on
-        n = {"subject": "set_pupil_detection_enabled", "value": is_on}
+        n = {"subject": "pupil_detector.set_enabled", "value": is_on}
         ipc_pub.notify(n)
 
     try:
@@ -121,8 +122,9 @@ def world(
 
         # display
         import glfw
+        from gl_utils import GLFWErrorReporting
 
-        glfw.ERROR_REPORTING = "raise"
+        GLFWErrorReporting.set_default()
 
         from version_utils import parse_version
         from pyglui import ui, cygl, __version__ as pyglui_version
@@ -415,7 +417,8 @@ def world(
             )
 
             # Needed, to update the window buffer while resizing
-            consume_events_and_render_buffer()
+            with gl_utils.current_context(main_window):
+                consume_events_and_render_buffer()
 
         def on_window_key(window, key, scancode, action, mods):
             g_pool.gui.update_key(key, scancode, action, mods)
@@ -465,8 +468,8 @@ def world(
         g_pool.min_calibration_confidence = session_settings.get(
             "min_calibration_confidence", 0.8
         )
-        g_pool.pupil_detection_enabled = session_settings.get(
-            "pupil_detection_enabled", True
+        g_pool.pupil_detection_enabled = bool(
+            session_settings.get("pupil_detection_enabled", True)
         )
         g_pool.active_gaze_mapping_plugin = None
         g_pool.capture = None
@@ -477,7 +480,7 @@ def world(
 
         def handle_notifications(noti):
             subject = noti["subject"]
-            if subject == "set_pupil_detection_enabled":
+            if subject == "pupil_detector.set_enabled":
                 g_pool.pupil_detection_enabled = noti["value"]
             elif subject == "start_plugin":
                 try:
@@ -493,7 +496,7 @@ def world(
                         g_pool.plugins.clean()
             elif subject == "eye_process.started":
                 noti = {
-                    "subject": "set_pupil_detection_enabled",
+                    "subject": "pupil_detector.set_enabled",
                     "value": g_pool.pupil_detection_enabled,
                 }
                 ipc_pub.notify(noti)
@@ -702,7 +705,10 @@ def world(
             return next(window_update_timer)
 
         # trigger setup of window and gl sizes
-        on_resize(main_window, *glfw.get_framebuffer_size(main_window))
+        g_pool.trigger_main_window_redraw = lambda: on_resize(
+            main_window, *glfw.get_framebuffer_size(main_window)
+        )
+        g_pool.trigger_main_window_redraw()
 
         if session_settings.get("eye1_process_alive", True):
             launch_eye_process(1, delay=0.6)
