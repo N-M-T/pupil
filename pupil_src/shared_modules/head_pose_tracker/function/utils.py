@@ -70,7 +70,7 @@ def rod_to_euler(rotation_pose):
         x = np.arctan2(-rot_mat[1, 2], rot_mat[1, 1])
         y = np.arctan2(-rot_mat[2, 0], sin_y)
         z = 0
-    return np.rad2deg([x, y, z])
+    return np.rad2deg([y, x, z])
 
 
 def get_camera_pose(camera_extrinsics):
